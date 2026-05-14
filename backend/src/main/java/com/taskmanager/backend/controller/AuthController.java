@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import com.taskmanager.backend.security.JwtUtil;
+import java.util.Map;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -24,11 +25,15 @@ public class AuthController {
     @PostMapping("/register")
     public User register(@RequestBody User user) {
 
+        System.out.println("Original Password: " + user.getPassword());
+
         user.setPassword(
                 passwordEncoder.encode(user.getPassword())
         );
 
-        user.setRole("MEMBER");
+        System.out.println("Encrypted Password: " + user.getPassword());
+
+        user.setRole("ADMIN");
 
         return userRepository.save(user);
     }
@@ -38,16 +43,26 @@ public class AuthController {
 
         User user = userRepository.findByEmail(loginUser.getEmail());
 
-        if (user != null &&
-                passwordEncoder.matches(
-                        loginUser.getPassword(),
-                        user.getPassword()
-                )) {
+        if (user == null) {
+            return "User Not Found";
+        }
 
-            String token =
-                    JwtUtil.generateToken(user.getEmail());
+        boolean passwordMatch = passwordEncoder.matches(
+                loginUser.getPassword(),
+                user.getPassword()
+        );
 
-            return token;
+        System.out.println("Password Match: " + passwordMatch);
+
+        if (passwordMatch) {
+
+            String token = JwtUtil.generateToken(user.getEmail());
+
+            return Map.of(
+                    "token", token,
+                    "role", user.getRole(),
+                    "email", user.getEmail()
+            );
         }
 
         return "Invalid Email or Password";
